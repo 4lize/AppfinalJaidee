@@ -11,6 +11,7 @@ import Combine
 @MainActor
 final class FullPostViewModel: ObservableObject {
     @Published var post: Post?
+    @Published var comments: [Comment] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -25,6 +26,17 @@ final class FullPostViewModel: ObservableObject {
         }
         isLoading = false
     }
+    
+    func loadComment(postId: Int64) async {
+        do {
+            let fetched = try await DatabaseManager.shared.fetchComment(post_id: postId)
+            self.comments = fetched
+        } catch {
+            print("Failed to fetch posts", error)
+            self.comments = []
+        }
+    }
+
 }
 
 struct FullPostView: View {
@@ -32,65 +44,30 @@ struct FullPostView: View {
     @StateObject private var vm = FullPostViewModel()
 
     var body: some View {
-        NavigationStack{
+        NavigationStack {
             VStack(spacing: 0) {
-                if vm.isLoading {
-                    ProgressView("Loading...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = vm.errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .padding()
-                    Spacer()
-                } else if let post = vm.post {
-                    // แสดงรายละเอียดโพสต์พื้นฐาน (ยังไม่สน comments)
-                    NavigationStack{
-                        ScrollView {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        if vm.isLoading {
+                            ProgressView("Loading...")
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if let error = vm.errorMessage {
+                            Text(error)
+                                .foregroundColor(.red)
+                                .padding()
+                            Spacer(minLength: 0)
+                        } else if let post = vm.post {
+                            // แสดงรายละเอียดโพสต์พื้นฐาน
                             VStack(alignment: .leading, spacing: 12) {
                                 // Thumbnail (ถ้ามี)
-                                if let urlString = post.thumbnail_url, let url = URL(string: urlString) {
-                                    AsyncImage(url: url) { phase in
-                                        switch phase {
-                                        case .empty:
-                                            ProgressView()
-                                        case .success(let image):
-                                            image.resizable().scaledToFill()
-                                        case .failure:
-                                            Color.gray.opacity(0.2)
-                                        @unknown default:
-                                            EmptyView()
-                                        }
-                                    }
-                                    .frame(height: 200)
-                                    .clipped()
-                                }
+                                FetchingPic.displayImage(pic_url: post.thumbnail_url, cornerRadius: 0, width: .infinity, height: 200)
                                 
                                 // Donee/Author (ถ้ามี)
                                 HStack(spacing: 10) {
-                                    if let profile = post.accounts?.profile_pic,
-                                       let url = URL(string: profile) {
-                                        AsyncImage(url: url) { phase in
-                                            switch phase {
-                                            case .empty:
-                                                Color.gray.opacity(0.2)
-                                            case .success(let image):
-                                                image.resizable().scaledToFill()
-                                            case .failure:
-                                                Color.gray.opacity(0.2)
-                                            @unknown default:
-                                                EmptyView()
-                                            }
-                                        }
-                                        .frame(width: 36, height: 36)
-                                        .clipShape(Circle())
-                                    } else {
-                                        Circle()
-                                            .fill(Color.green)
-                                            .frame(width: 36, height: 36)
-                                    }
+                                    FetchingPic.displayImage(pic_url: post.accounts?.profile_pic, cornerRadius: 999, width: 36, height: 36)
                                     
                                     Text(post.accounts?.name_display ?? "Unknown")
-                                        .font(.caption)
+                                        .font(.callout)
                                 }
                                 
                                 Text(post.title ?? "No Title")
@@ -100,14 +77,26 @@ struct FullPostView: View {
                                 Text(post.content ?? "")
                                     .font(.body)
                             }
-                            .padding()
+                            .padding(.horizontal)
+                            .padding(.top)
+                            
+                            // Comments
+                            LazyVStack(alignment: .center, spacing: 20) {
+                                ForEach(vm.comments, id: \.id) { comment in
+                                    CommentRowView(comment: comment)
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                }
+                            }
+                            .padding(.bottom, 12)
+                        } else {
+                            Text("ไม่มีข้อมูลโพสต์")
+                                .padding()
+                            Spacer(minLength: 0)
                         }
                     }
-                } else {
-                    Text("ไม่มีข้อมูลโพสต์")
-                        .padding()
-                    Spacer()
                 }
+                
+                // Button placed directly under the ScrollView, no extra gap
                 NavigationLink {
                     TransactionView(postId: postId)
                 } label: {
@@ -115,19 +104,43 @@ struct FullPostView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
+                        .background(Color.accentColor)
+                        .foregroundColor(.white)
                 }
-                .background(Color.accentColor)
-                .foregroundColor(.white)
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 await vm.load(postId: postId)
+                await vm.loadComment(postId: postId)
+                dump(vm.comments)
             }
         }
     }
 }
 
+struct CommentRowView: View {
+    let comment: Comment
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 10) {
+                FetchingPic.displayImage(pic_url: comment.accounts?.profile_pic, cornerRadius: 999, width: 40, height: 40)
+                Text(comment.accounts!.name_display!)
+                    .font(.callout)
+            }
+            Text(comment.comment!)
+                .font(.body)
+            Rectangle()
+                .foregroundColor(.clear)
+                .frame(height: 0)
+                .overlay(Rectangle().stroke(Color(.systemGray3), lineWidth: 0.25))
+        }
+        .padding(.horizontal, 33)
+        .padding(.vertical, 10)
+    }
+}
+    
 #Preview {
     // ตัวอย่าง Preview ด้วย id สมมติ (ต้องมีโพสต์ id นี้ในฐานข้อมูลจริงถึงจะโหลดเจอ)
     FullPostView(postId: 1)

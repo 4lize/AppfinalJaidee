@@ -1,0 +1,10 @@
+# macOS junk
+.DS_Store
+
+# Xcode
+DerivedData/
+*.xcworkspace
+xcuserdata/
+
+# Swift Package Manager
+.build/

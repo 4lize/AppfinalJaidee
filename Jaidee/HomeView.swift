@@ -8,11 +8,10 @@
 import SwiftUI
 import Combine
 
-
 class HomeViewModel: ObservableObject {
     // ดึงมาเป็นArray ตามโครงสร้าง'Post'
     @Published var posts: [Post] = []
-    
+
     @MainActor
     func loadPosts() async {
         do {
@@ -26,9 +25,9 @@ class HomeViewModel: ObservableObject {
 }
 
 struct HomeView: View {
-    @ObservedObject var authViewModel: AuthViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject var viewModel = HomeViewModel()
-    
+
     var body: some View {
         NavigationStack{
             VStack(spacing: 16) {
@@ -39,7 +38,6 @@ struct HomeView: View {
                     } else {
                         ScrollView {
                             LazyVStack(alignment: .center, spacing: 20) {
-                                //Loopแสดง
                                 ForEach(viewModel.posts, id: \.id) { post in
                                     PostCard(post: post)
                                         .frame(maxWidth: .infinity, alignment: .center)
@@ -50,17 +48,19 @@ struct HomeView: View {
                         .padding()
                     }
                 }
-                
+
                 Button("Sign Out") {
                     Task {
                         do {
                             try await authViewModel.signOut()
+                        } catch {
+                            print("Sign out failed: \(error)")
                         }
                     }
                 }
             }
         }
-        .background(Color.white) // พื้นหลังทั้งหน้าเป็นสีดำ
+        .background(Color.white)
         .ignoresSafeArea()
         .task {
             await viewModel.loadPosts()
@@ -68,23 +68,18 @@ struct HomeView: View {
         .refreshable {
             await viewModel.loadPosts()
         }
-        
     }
-    
 }
 
 //โครงสร้าง
 struct PostCard: View {
     let post: Post
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            //ดึงรูปภาพThumbnail
             FetchingPic.displayImage(pic_url: post.thumbnail_url, cornerRadius: 0,width: .infinity, height: 230)
-            //
             VStack(alignment: .leading, spacing: 20) {
                 HStack(spacing: 10) {
-                    //profile pic
                     FetchingPic.displayImage(pic_url: post.accounts!.profile_pic!, cornerRadius: 999,width: 36, height: 36)
                     Text(post.accounts!.name_display!)
                         .font(.caption)
@@ -98,8 +93,7 @@ struct PostCard: View {
                     .font(.subheadline)
                     .foregroundColor(.primary)
                     .lineLimit(3)
-                // Recent comment preview [UIStructure_R]
-                
+
                 NavigationLink {
                     FullPostView(postId: post.id)
                 } label: {
@@ -126,7 +120,6 @@ struct HeaderView: View {
             Text("Jaidee")
                 .font(.largeTitle)
             Spacer()
-            // Profile placeholder (green if no image)
             Rectangle()
                 .foregroundColor(.green)
                 .frame(width: 36, height: 36)
@@ -135,6 +128,9 @@ struct HeaderView: View {
         .padding()
     }
 }
+
 #Preview {
-    HomeView(authViewModel: AuthViewModel())
+    HomeView()
+        .environmentObject(AuthViewModel())
 }
+

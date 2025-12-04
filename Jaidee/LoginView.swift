@@ -9,20 +9,20 @@ import SwiftUI
 import Combine
 
 struct LoginView: View {
-    @ObservedObject var authViewModel: AuthViewModel
+    @EnvironmentObject var authViewModel: AuthViewModel
     @State private var email = ""
     @State private var password = ""
-    
+
     var body: some View {
         VStack(spacing: 12) {
             TextField("Email", text: $email)
                 .textFieldStyle(.roundedBorder)
                 .textInputAutocapitalization(.never)
                 .keyboardType(.emailAddress)
-            
+
             SecureField("Password", text: $password)
                 .textFieldStyle(.roundedBorder)
-            
+
             Button {
                 Task {
                     do {
@@ -39,7 +39,7 @@ struct LoginView: View {
                     .background(Color.orange)
                     .cornerRadius(20)
             }
-            
+
             Button {
                 Task {
                     do {
@@ -66,5 +66,7 @@ struct LoginView: View {
 }
 
 #Preview {
-    LoginView(authViewModel: AuthViewModel())
+    LoginView()
+        .environmentObject(AuthViewModel())
 }
+

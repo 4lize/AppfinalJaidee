@@ -8,14 +8,14 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var authViewModel = AuthViewModel()
+    @EnvironmentObject var authViewModel: AuthViewModel
+
     var body: some View {
-        
-        Group{
+        Group {
             if authViewModel.isAuthenticated {
-                HomeView(authViewModel: authViewModel)
+                HomeView()
             } else {
-                LoginView(authViewModel: authViewModel)
+                LoginView()
             }
         }
         .task {
@@ -30,4 +30,6 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(AuthViewModel())
 }
+
