@@ -12,6 +12,7 @@ class HomeViewModel: ObservableObject {
     // ดึงมาเป็นArray ตามโครงสร้าง'Post'
     @Published var posts: [Post] = []
 
+
     @MainActor
     func loadPosts() async {
         do {
@@ -113,17 +114,17 @@ struct PostCard: View {
         .cornerRadius(12)
     }
 }
+
 //หัวจอ
 struct HeaderView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+
     var body: some View {
         HStack {
             Text("Jaidee")
                 .font(.largeTitle)
             Spacer()
-            Rectangle()
-                .foregroundColor(.green)
-                .frame(width: 36, height: 36)
-                .cornerRadius(999)
+            FetchingPic.displayImage(pic_url: authViewModel.Me?.profile_pic, cornerRadius: 999, width: 36, height: 36)
         }
         .padding()
     }
@@ -133,4 +134,3 @@ struct HeaderView: View {
     HomeView()
         .environmentObject(AuthViewModel())
 }
-
