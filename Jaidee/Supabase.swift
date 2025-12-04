@@ -21,6 +21,8 @@ struct Post: Codable, Identifiable {
     let content: String?
     let accounts: Account?
     let thumbnail_url: String?
+    let bank: String?
+    let bank_number: String?
     
     struct Account: Codable {
         let name_display: String?
@@ -35,6 +37,21 @@ struct NewTransaction: Encodable {
     let transaction_number: String?
     let amount: Double?
     let timestamp: Date?
+    let comment: String?
+}
+
+struct Comment: Codable, Identifiable {
+    let id: Int64
+    let post_id: Int64
+    let donor_id: String?
+    let accounts: Account?
+    let comment: String?
+    let status: String?
+    
+    struct Account: Codable {
+        let name_display: String?
+        let profile_pic: String?
+    }
 }
 
 //Function Fetch กับ Create
@@ -46,11 +63,12 @@ class DatabaseManager {
     func fetchPost() async throws -> [Post] {
         try await supabase
             .from("post")
-            .select("id, created_at, author, title, content, accounts(name_display, profile_pic), thumbnail_url")
+            .select("id, created_at, author, title, content, accounts(name_display, profile_pic), thumbnail_url, bank, bank_number")
             .execute()
             .value
     }
     
+    /*
     func createPost(title: String, author: String?) async throws {
         let response = try await supabase
             .from("post")
@@ -61,33 +79,45 @@ class DatabaseManager {
             .execute()
         
         print("Status:", response.status)
-    }
+    }*/
     
     // fetchเฉพาะโพสที่จะดู
     func fetchSpecificPost(id: Int64) async throws -> Post {
         try await supabase
             .from("post")
-            .select("id, created_at, author, title, content, accounts(name_display, profile_pic), thumbnail_url")
+            .select("id, created_at, author, title, content, accounts(name_display, profile_pic), thumbnail_url, bank, bank_number")
             .eq("id", value: Int(id)) // or .eq("id", value: String(id))
             .single()
             .execute()
             .value
     }
     
-    func uploadTransaction(post_id: String, donor_id: String?, name: String?, transaction_number: String?, amount: Double, timestamp: Date) async throws {
+    func uploadTransaction(post_id: String, donor_id: String?, name: String?, transaction_number: String?, amount: Double, timestamp: Date, comment: String? ) async throws {
         let payload = NewTransaction(
             post_id: post_id,
             donor_id: donor_id,
             name: name,
             transaction_number: transaction_number,
             amount: amount,
-            timestamp: timestamp
+            timestamp: timestamp,
+            comment: comment
         )
         let response = try await supabase
             .from("transaction")
             .insert(payload)
             .execute()
         print("Transaction insert status:", response.status)
+    }
+    
+    func fetchComment(post_id: Int64) async throws -> [Comment] {
+        try await supabase
+            .from("transaction")
+            .select("id, post_id, donor_id, comment, status, accounts(name_display, profile_pic)")
+            .eq("post_id", value: Int(post_id))
+            .eq("status", value: "2")
+            .not("comment", operator: .is, value: Optional<String>.none)//ไม่เป็นnull
+            .execute()
+            .value
     }
 }
 
