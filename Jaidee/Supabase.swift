@@ -54,6 +54,13 @@ struct Comment: Codable, Identifiable {
     }
 }
 
+struct Me: Codable, Identifiable {
+    let id: String?
+    let name_display: String?
+    let name_legal: String?
+    let profile_pic: String?
+}
+
 //Function Fetch กับ Create
 class DatabaseManager {
     static let shared = DatabaseManager()
@@ -116,6 +123,16 @@ class DatabaseManager {
             .eq("post_id", value: Int(post_id))
             .eq("status", value: "2")
             .not("comment", operator: .is, value: Optional<String>.none)//ไม่เป็นnull
+            .execute()
+            .value
+    }
+    
+    func fetchMe(id: String) async throws -> Me {
+        try await supabase
+            .from("accounts")
+            .select("id, name_display, name_legal, profile_pic")
+            .eq("id", value: id)
+            .single()
             .execute()
             .value
     }
