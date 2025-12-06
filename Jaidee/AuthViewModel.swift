@@ -17,8 +17,8 @@ class AuthViewModel: ObservableObject {
     @Published var Me: Me?
     func getMeInfo() async {
         do {
-            let uid = session?.user.id.uuidString
-            let fetched = try await DatabaseManager.shared.fetchMe(id: uid!)
+            let uid = session?.user.id.uuidString ?? ""
+            let fetched = try await DatabaseManager.shared.fetchMe(id: uid)
             self.Me = fetched
         } catch {
             print("Failed to fetch post", error)
@@ -34,6 +34,7 @@ class AuthViewModel: ObservableObject {
             dump(session?.user.id.uuidString)
             //let uid = session?.user.id.uuidString
             //self.Me = try await DatabaseManager.shared.fetchMe(id: uid!)
+            await getMeInfo()
         } catch {
             print("No active session: \(error.localizedDescription)")
         }
@@ -54,6 +55,7 @@ class AuthViewModel: ObservableObject {
             let result = try await supabase.auth.signIn(email: email, password: password)
             self.session = result
             self.isAuthenticated = self.session != nil
+            await getMeInfo()
         }
         catch{
             print("Sign in failed: \(error.localizedDescription)")
