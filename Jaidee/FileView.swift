@@ -13,20 +13,48 @@ import Supabase
 class FileViewModel: ObservableObject {
     private let authViewModel: AuthViewModel
     @Published var file: [File] = []
-    
+    @Published var isLoading = false
+
+    // เก็บ Task ปัจจุบันเพื่อยกเลิกก่อนเริ่มอันใหม่
+    private var currentLoadTask: Task<Void, Never>?
+
     init(authViewModel: AuthViewModel) {
         self.authViewModel = authViewModel
     }
     
-    func loadComment() async {
-        do {
-            let uid = authViewModel.session?.user.id.uuidString ?? "7ce30b8d-acf9-4f98-9ee1-25f2961759f6"
-            let fetched = try await DatabaseManager.shared.fetchFile(id: uid)
-            self.file = fetched
-        } catch {
-            print("Failed to fetch posts", error)
-            self.file = []
+    func loadComment(reset: Bool = false) async {
+        // ยกเลิกงานก่อนหน้า
+        currentLoadTask?.cancel()
+
+        currentLoadTask = Task { [weak self] in
+            guard let self else { return }
+            if Task.isCancelled { return }
+
+            // ตั้งสถานะโหลดก่อน เเละรีเซ็ตเมื่อร้องขอ
+            isLoading = true
+            if reset {
+                self.file = [] // รีเซ็ตเพื่อให้ UI แสดงตัวโหลดแทนการ์ดเก่า
+            }
+            
+            defer { isLoading = false }
+
+            do {
+                let uid = authViewModel.session?.user.id.uuidString ?? "7ce30b8d-acf9-4f98-9ee1-25f2961759f6"
+                let fetched = try await DatabaseManager.shared.fetchFile(id: uid)
+                if Task.isCancelled { return }
+                self.file = fetched
+            } catch {
+                // มองข้ามกรณีถูกยกเลิก
+                if let urlError = error as? URLError, urlError.code == .cancelled {
+                    return
+                }
+                print("Failed to fetch posts", error)
+                // ถ้าอยากให้ว่างเมื่อ error ก็ปล่อยไว้, ตอนนี้คงเป็น [] อยู่แล้วเมื่อ reset
+                // ถ้าไม่ reset ก็อย่าไปล้าง จะคงข้อมูลเดิมไว้ได้
+            }
         }
+
+        await currentLoadTask?.value
     }
 }
 
@@ -34,24 +62,39 @@ struct FileView: View {
     @EnvironmentObject private var authViewModel: AuthViewModel
     @StateObject private var vm: FileViewModel
 
-    // Inject the same AuthViewModel that’s in the environment when constructing this view.
-    // HomeView will pass it in.
     init(authViewModel: AuthViewModel) {
         _vm = StateObject(wrappedValue: FileViewModel(authViewModel: authViewModel))
     }
     
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .center, spacing: 10) {
-                ForEach(vm.file, id: \.id) { file in
-                    cardFile(file: file)
-                        .frame(maxWidth: .infinity, alignment: .center)
+            VStack(alignment: .center, spacing: 10) {
+                if vm.isLoading && vm.file.isEmpty {
+                    // แสดงตัวโหลดแทน ไม่ให้จอขาว
+                    ProgressView("กำลังโหลด...")
+                        .padding(.top, 24)
+                } else if vm.file.isEmpty {
+                    // สถานะว่างหลังโหลดเสร็จแล้วแต่ไม่มีข้อมูล
+                    Text("ไม่มีไฟล์")
+                        .foregroundColor(.secondary)
+                        .padding(.top, 24)
+                } else {
+                    // แสดงการ์ดเมื่อมีข้อมูล
+                    ForEach(vm.file, id: \.id) { file in
+                        cardFile(file: file)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
                 }
             }
             .padding(.bottom, 12)
         }
         .task {
-            await vm.loadComment()
+            // โหลดครั้งแรก รีเซ็ตและแสดงตัวโหลด
+            await vm.loadComment(reset: true)
+        }
+        .refreshable {
+            // รีเซ็ตและโหลดใหม่บน pull-to-refresh
+            await vm.loadComment(reset: true)
         }
     }
 }

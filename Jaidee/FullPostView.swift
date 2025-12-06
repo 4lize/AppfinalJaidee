@@ -47,7 +47,7 @@ struct FullPostView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
-                    VStack(spacing: 0) {
+                    VStack(alignment: .center, spacing: 0) {
                         if vm.isLoading {
                             ProgressView("Loading...")
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -58,45 +58,51 @@ struct FullPostView: View {
                             Spacer(minLength: 0)
                         } else if let post = vm.post {
                             // แสดงรายละเอียดโพสต์พื้นฐาน
-                            VStack(alignment: .leading, spacing: 12) {
-                                // Thumbnail (ถ้ามี)
+                            VStack(alignment: .center, spacing: 12) {
+                                // Thumbnail
                                 FetchingPic.displayImage(pic_url: post.thumbnail_url, cornerRadius: 0, width: .infinity, height: 200)
-                                
-                                // Donee/Author (ถ้ามี)
-                                HStack(spacing: 10) {
-                                    FetchingPic.displayImage(pic_url: post.accounts?.profile_pic, cornerRadius: 999, width: 36, height: 36)
+                                VStack(alignment: .leading) {
+                                    // Donee/Author
+                                    HStack(spacing: 10) {
+                                        FetchingPic.displayImage(pic_url: post.accounts?.profile_pic, cornerRadius: 999, width: 36, height: 36)
+                                        
+                                        Text(post.accounts?.name_display ?? "Unknown")
+                                            .font(.callout)
+                                    }
                                     
-                                    Text(post.accounts?.name_display ?? "Unknown")
-                                        .font(.callout)
+                                    Text(post.title ?? "No Title")
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+                                        .padding(.top, 8)
+                                        .padding(.bottom, 8)
+                                    
+                                    Text(post.content ?? "")
+                                        .font(.body)
                                 }
-                                
-                                Text(post.title ?? "No Title")
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                
-                                Text(post.content ?? "")
-                                    .font(.body)
+                                .padding(.top)
+                                .frame(width: 350)
                             }
-                            .padding(.horizontal)
-                            .padding(.top)
                             
                             // Comments
-                            HStack {
-                                Text("คำอวยพรจากผู้บริจาคทุกท่าน")
-                                    .padding(20)
-                                    .padding(.top, 5)
-                                    .font(.title3.bold())
-                                    .foregroundColor(Color(red: 0.4, green: 0.68, blue: 0.78))
-                                Spacer()
-                            }
-                            
-                            LazyVStack(alignment: .center, spacing: 20) {
-                                ForEach(vm.comments, id: \.id) { comment in
-                                    CommentRowView(comment: comment)
-                                        .frame(maxWidth: .infinity, alignment: .center)
+                            VStack(alignment: .center, spacing: 12) {
+                                HStack {
+                                    Text("คำอวยพรจากผู้บริจาคทุกท่าน")
+                                        .padding(.vertical, 20)
+                                        .padding(.top, 5)
+                                        .font(.title3.bold())
+                                        .foregroundColor(Color(red: 0.4, green: 0.68, blue: 0.78))
+                                    Spacer()
                                 }
+                                
+                                LazyVStack(alignment: .center, spacing: 20) {
+                                    ForEach(vm.comments, id: \.id) { comment in
+                                        CommentRowView(comment: comment)
+                                            .frame(maxWidth: .infinity, alignment: .center)
+                                    }
+                                }
+                                .padding(.bottom, 12)
                             }
-                            .padding(.bottom, 12)
+                            .frame(width: 350)
                         } else {
                             Text("ไม่มีข้อมูลโพสต์")
                                 .padding()
