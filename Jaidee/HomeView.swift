@@ -48,6 +48,8 @@ struct HomeView: View {
             await viewModel.loadPosts()
         }
         .refreshable {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            viewModel.posts = []
             await viewModel.loadPosts()
         }
     }
@@ -70,7 +72,7 @@ struct HomeContentView: View {
                             LazyVStack(alignment: .center, spacing: 20) {
                                 ForEach(viewModel.posts, id: \.id) { post in
                                     PostCard(post: post)
-                                        .frame(maxWidth: .infinity, alignment: .center)
+                                        .frame(alignment: .center)
                                 }
                             }
                             .padding(.horizontal, 0)
@@ -93,7 +95,7 @@ struct PostCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            FetchingPic.displayImage(pic_url: post.thumbnail_url, cornerRadius: 0,width: .infinity, height: 230)
+            FetchingPic.displayImage(pic_url: post.thumbnail_url, cornerRadius: 0,width: 350, height: 230)
             VStack(alignment: .leading, spacing: 20) {
                 HStack(spacing: 10) {
                     FetchingPic.displayImage(pic_url: post.accounts!.profile_pic!, cornerRadius: 999,width: 36, height: 36)
@@ -127,6 +129,7 @@ struct PostCard: View {
         }
         .background(Color(red: 0.73, green: 0.87, blue: 0.91))
         .cornerRadius(12)
+        .frame(width: 350)
     }
 }
 
