@@ -21,7 +21,6 @@ struct ContentView: View {
         .task {
             do {
                 try await authViewModel.getInitialSession()
-                await authViewModel.getMeInfo()
             } catch {
                 print("Failed to get initial session: \(error)")
             }

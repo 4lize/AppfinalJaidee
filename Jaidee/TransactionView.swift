@@ -51,15 +51,20 @@ class TransactionViewModel: ObservableObject {
         defer { isProcessing = false }
         print(donorId)
         
-        // Validate amount as Int8 (per current DatabaseManager signature)
-        let amtDouble = Double(amount)
+        // แปลงเงินจากstringเป็นdouble
+        let trimmedAmount = amount.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let amtDouble = Double(trimmedAmount) else {
+            errorMessage = "จำนวนเงินไม่ถูกต้อง"
+            return false
+        }
+        
         do {
             try await DatabaseManager.shared.uploadTransaction(
                 post_id: postId,
                 donor_id: donorId,
                 name: donorNameInput.isEmpty ? nil : donorNameInput,
                 transaction_number: transactionRef.isEmpty ? nil : transactionRef,
-                amount: amtDouble!,
+                amount: amtDouble,
                 timestamp: date,
                 comment: comment
             )
@@ -76,6 +81,7 @@ struct TransactionView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @StateObject private var vm = TransactionViewModel()
     @StateObject private var om = OCRViewModel()
+    @Environment(\.dismiss) private var dismiss
     
     @State private var showConfirm = false
     @State private var showResult = false
@@ -244,7 +250,13 @@ struct TransactionView: View {
                 Text("จะส่งแล้ว มั่นใจแล้วใช่หรือไม่")
             }
             .alert(resultMessage, isPresented: $showResult) {
-                Button("OK", role: .cancel) { }
+                Button("OK", role: .cancel) {
+                    Task {
+                        if resultMessage == "ส่งข้อมูลสำเร็จ" {
+                            dismiss()
+                        }
+                    }
+                }
             }
         }
     }

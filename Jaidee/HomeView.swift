@@ -60,7 +60,7 @@ struct HomeContentView: View {
 
     var body: some View {
         NavigationStack{
-            VStack(spacing: 16) {
+            VStack(spacing: 0) {
                 HeaderView()
                 ZStack{
                     if viewModel.posts.isEmpty {
@@ -78,16 +78,8 @@ struct HomeContentView: View {
                         .padding()
                     }
                 }
-
-                Button("Sign Out") {
-                    Task {
-                        do {
-                            try await authViewModel.signOut()
-                        } catch {
-                            print("Sign out failed: \(error)")
-                        }
-                    }
-                }
+                
+                
             }
         }
         .background(Color.white)
@@ -127,6 +119,7 @@ struct PostCard: View {
                         .background(Color(.systemBackground))
                         .cornerRadius(10)
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .foregroundColor(Color(red: 0.4, green: 0.68, blue: 0.78))
                 }
             }
             .padding(.horizontal, 20)
@@ -145,10 +138,14 @@ struct HeaderView: View {
         HStack {
             Text("Jaidee")
                 .font(.largeTitle)
+                .padding(0)
             Spacer()
             FetchingPic.displayImage(pic_url: authViewModel.Me?.profile_pic, cornerRadius: 999, width: 36, height: 36)
+                .padding(0)
         }
-        .padding()
+        .padding(.top)
+        .padding(.horizontal)
+        .padding(.bottom, 0)
     }
 }
 

@@ -81,6 +81,15 @@ struct FullPostView: View {
                             .padding(.top)
                             
                             // Comments
+                            HStack {
+                                Text("คำอวยพรจากผู้บริจาคทุกท่าน")
+                                    .padding(20)
+                                    .padding(.top, 5)
+                                    .font(.title3.bold())
+                                    .foregroundColor(Color(red: 0.4, green: 0.68, blue: 0.78))
+                                Spacer()
+                            }
+                            
                             LazyVStack(alignment: .center, spacing: 20) {
                                 ForEach(vm.comments, id: \.id) { comment in
                                     CommentRowView(comment: comment)
@@ -104,7 +113,7 @@ struct FullPostView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.accentColor)
+                        .background(Color(red: 0.4, green: 0.68, blue: 0.78))
                         .foregroundColor(.white)
                 }
             }
@@ -136,8 +145,12 @@ struct CommentRowView: View {
                 .frame(height: 0)
                 .overlay(Rectangle().stroke(Color(.systemGray3), lineWidth: 0.25))
         }
-        .padding(.horizontal, 33)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        .background(Color(red: 0.73, green: 0.87, blue: 0.91))
+        .frame(width: 370)
+        .cornerRadius(12)
     }
 }
     

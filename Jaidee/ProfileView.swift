@@ -44,6 +44,8 @@ struct ProfileView: View {
     
     var body: some View {
         VStack {
+        VStack {
+            Spacer()
             HStack{
                 PhotosPicker(
                     selection: $selectedItem,
@@ -64,10 +66,10 @@ struct ProfileView: View {
                                 cornerRadius: 999,
                                 width: 60,
                                 height: 60
-                                )
+                            )
                             .overlay(
                                 Circle().stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                                )
+                            )
                         }
                     }
                     .onChange(of: selectedItem) { newValue in
@@ -91,7 +93,7 @@ struct ProfileView: View {
                             
                         }
                     }
-            
+                
                 
                 VStack(alignment: .leading) {
                     Text(authViewModel.Me?.name_display ?? "Loading...")
@@ -156,8 +158,23 @@ struct ProfileView: View {
             .alert(resultMessage, isPresented: $showResult) {
                 Button("OK", role: .cancel) { }
             }
+            Spacer()
         }
+        Button("Sign Out") {
+            Task {
+                do {
+                    try await authViewModel.signOut()
+                } catch {
+                    print("Sign out failed: \(error)")
+                }
+            }
+        }
+        .foregroundColor(Color.white)
+        .frame(height: 50)
+        .frame(maxWidth: .infinity)
+        .background(Color(red: 0.96, green: 0.46, blue: 0.42))
     }
+}
 }
 
 #Preview {
