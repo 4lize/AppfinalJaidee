@@ -12,6 +12,11 @@ import SwiftUI
 
 //อันนี้สำคัญ ไว้เชื่อDatabase
 let supabase = SupabaseClient(supabaseURL: URL(string: "https://ebnamplbvcoxazbjylxl.supabase.co")!, supabaseKey: "publickeyAPI")
+let client = SupabaseClient(supabaseURL: URL(string: "https://ebnamplbvcoxazbjylxl.supabase.co")!, supabaseKey: "secretkeyAPI}")
+
+//let storage = SupabaseStorageClient(url: "https://ebnamplbvcoxazbjylxl.supabase.co", headers: ["apikey" : ""])
+//Access key ID:1b97628f5f8b3fa9716f2d71521e4278
+//Secret access key:0a08d17e3cf33975d620fefba674cb2aea5ca1aec02b65880189631ad0f7b76a
 
 struct Post: Codable, Identifiable {
     let id: Int64
@@ -58,7 +63,23 @@ struct Me: Codable, Identifiable {
     let id: String?
     let name_display: String?
     let name_legal: String?
-    let profile_pic: String?
+    var profile_pic: String?
+}
+
+struct File: Codable, Identifiable {
+    let id: Int64
+    let post_id: Int64
+    let donor_id: String?
+    let comment: String?
+    let status: String?
+    let amount: Double?
+    let post: Post?
+    let file: String?
+    
+    struct Post: Codable {
+        let thumbnail_url: String?
+        let title: String?
+    }
 }
 
 //Function Fetch กับ Create
@@ -136,6 +157,63 @@ class DatabaseManager {
             .execute()
             .value
     }
+    
+    func updateMe(id: String, name_display: String, name_legal: String) async throws {
+        try await supabase
+            .from("accounts")
+            .update([
+                "name_display": name_display,
+                "name_legal": name_legal
+            ])
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+    }
+    
+    
+    func updateProfile(id: String, imageData: Data) async throws {
+        
+        Task {
+            do {
+                let result = try await client.storage
+                            .from("profile")
+                            .upload(
+                                path: "\(id).jpg",
+                                file: imageData,
+                                options: FileOptions(
+                                    contentType: "image/jpeg",
+                                    upsert: true       // ★ สำคัญ: อนุญาตให้เขียนทับไฟล์เดิม
+                                )
+                            )
+                print("Upload success: \(result)")
+            } catch {
+                print("Upload failed: \(error)")
+            }
+        }
+        let url = try supabase.storage
+            .from("profile")
+            .getPublicURL(path: "\(id).jpg")
+        //อัพurlกลับDatabase
+        try await supabase
+            .from("accounts")
+            .update([
+                "profile_pic": url,
+            ])
+            .eq("id", value: id)
+            .single()
+            .execute()
+            .value
+    }
+    
+    func fetchFile(id: String) async throws -> [File] {
+        try await supabase
+            .from("transaction")
+            .select("id, post_id, donor_id, amount, comment, status, post(thumbnail_url, title), file")
+            .eq("donor_id", value: id)
+            .execute()
+            .value
+    }
 }
 
 
@@ -188,3 +266,4 @@ public struct FetchingPic {
         )
     }
 }
+

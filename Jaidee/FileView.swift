@@ -6,13 +6,195 @@
 //
 
 import SwiftUI
+import Combine
+import Supabase
+
+@MainActor
+class FileViewModel: ObservableObject {
+    private let authViewModel: AuthViewModel
+    @Published var file: [File] = []
+    
+    init(authViewModel: AuthViewModel) {
+        self.authViewModel = authViewModel
+    }
+    
+    func loadComment() async {
+        do {
+            let uid = authViewModel.session?.user.id.uuidString ?? "7ce30b8d-acf9-4f98-9ee1-25f2961759f6"
+            let fetched = try await DatabaseManager.shared.fetchFile(id: uid)
+            self.file = fetched
+        } catch {
+            print("Failed to fetch posts", error)
+            self.file = []
+        }
+    }
+}
 
 struct FileView: View {
+    @EnvironmentObject private var authViewModel: AuthViewModel
+    @StateObject private var vm: FileViewModel
+
+    // Inject the same AuthViewModel that’s in the environment when constructing this view.
+    // HomeView will pass it in.
+    init(authViewModel: AuthViewModel) {
+        _vm = StateObject(wrappedValue: FileViewModel(authViewModel: authViewModel))
+    }
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        ScrollView {
+            LazyVStack(alignment: .center, spacing: 10) {
+                ForEach(vm.file, id: \.id) { file in
+                    cardFile(file: file)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .padding(.bottom, 12)
+        }
+        .task {
+            await vm.loadComment()
+        }
+    }
+}
+
+struct cardFile: View {
+    let file: File
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 16) {
+                FetchingPic.displayImage(
+                    pic_url: file.post?.thumbnail_url,
+                    cornerRadius: 12,
+                    width: 120,
+                    height: 80
+                )
+                HStack {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(file.post?.title ?? "<Title>")
+                            .font(.headline)
+                        Text("\(file.amount!, specifier: "%.2f") บาท")
+                            .font(.headline)
+                        HStack {
+                            Spacer()
+                            if file.status == "1" {
+                                Text("...Pending")
+                                    .font(.body.bold())
+                                    .foregroundColor(Color.orange)
+                            }
+                            else if file.status == "2" {
+                                Text("Accept")
+                                    .font(.body.bold())
+                                    .foregroundColor(Color.green)
+                            }
+                            else if file.status == "3" {
+                                Text("Reject")
+                                    .font(.body.bold())
+                                    .foregroundColor(Color.red)
+                            }
+                        }
+                    }
+                    Spacer()
+                }
+            }
+            HStack {
+                Spacer()
+                ButtonView(file: file)
+            }
+        }
+        .frame(width: 350, height: 150)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 0)
+        .background(Color(red: 0.73, green: 0.87, blue: 0.91))
+        .cornerRadius(12)
+    }
+}
+
+struct ButtonView: View {
+    let file:File
+    
+    var body: some View {
+        if file.status == "3" {
+            Button {
+                Task {
+                    
+                }
+            }label: {
+                Text("โปรดติดต่อมูลนิธิ")
+                    .frame(width: 150)
+                    .foregroundColor(.black.opacity(0.8))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.red.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.red.opacity(0.8), lineWidth: 3)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+            }
+        }
+        else if file.file == nil {
+            Button {
+                Task {
+                    
+                }
+            }label: {
+                Text("โปรดรอไฟล์หลักฐาน")
+                    .frame(width: 150)
+                    .foregroundColor(.black.opacity(0.8))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.orange.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.orange.opacity(0.8), lineWidth: 3)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+            }
+        }
+        else {
+            Button {
+                Task {
+                    await downloadPDF()
+                }
+            }label: {
+                Text("โหลดไฟล์หลักฐาน")
+                    .frame(width: 150)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.green)
+                    .cornerRadius(20)
+            }
+        }
+    }
+
+    func downloadPDF() async {
+        
+        do {
+            //ดึงจากsupabaseใน  bucket file
+            let data = try await supabase.storage
+                .from("file")
+                .download(path: file.file ?? "")//
+
+            //อันนี้เอาใส่ในไฟล์แอปชั่วคราว
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(file.file ?? "หลักฐาน")
+            try data.write(to: tempURL)
+
+            // เปิด Share Sheet ให้ user เซฟ / เปิดไฟล์
+            let av = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+            UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                .first?.keyWindow?.rootViewController?
+                .present(av, animated: true)
+
+        } catch {
+            print("Error:", error.localizedDescription)
+        }
     }
 }
 
 #Preview {
-    FileView()
+    // For preview, construct and inject the same instance both ways.
+    let authVM = AuthViewModel()
+    return FileView(authViewModel: authVM)
+        .environmentObject(authVM)
 }
