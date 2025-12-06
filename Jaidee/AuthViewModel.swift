@@ -32,8 +32,8 @@ class AuthViewModel: ObservableObject {
             self.session = current
             self.isAuthenticated = true
             dump(session?.user.id.uuidString)
-            let uid = session?.user.id.uuidString
-            self.Me = try await DatabaseManager.shared.fetchMe(id: uid!)
+            //let uid = session?.user.id.uuidString
+            //self.Me = try await DatabaseManager.shared.fetchMe(id: uid!)
         } catch {
             print("No active session: \(error.localizedDescription)")
         }

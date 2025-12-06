@@ -246,7 +246,8 @@ struct TransactionView: View {
             .alert(resultMessage, isPresented: $showResult) {
                 Button("OK", role: .cancel) { }
             }
-        }}
+        }
+    }
 }
 
 #Preview {

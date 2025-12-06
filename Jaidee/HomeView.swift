@@ -30,6 +30,35 @@ struct HomeView: View {
     @StateObject var viewModel = HomeViewModel()
 
     var body: some View {
+        TabView {
+            HomeContentView(viewModel: viewModel)
+                .tabItem {
+                    Label("Home", systemImage: "house")
+                }
+            FileView(authViewModel: authViewModel)
+                .tabItem {
+                    Label("Files", systemImage: "doc.text")
+                }
+            ProfileView(authViewModel: authViewModel)
+                .tabItem {
+                    Label("Profile", systemImage: "person")
+                }
+        }
+        .task {
+            await viewModel.loadPosts()
+        }
+        .refreshable {
+            await viewModel.loadPosts()
+        }
+    }
+}
+
+// เนื้อหาหลักของ Home เดิม แยกออกมาเพื่อใช้ใน Tab แรก
+struct HomeContentView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @ObservedObject var viewModel: HomeViewModel
+
+    var body: some View {
         NavigationStack{
             VStack(spacing: 16) {
                 HeaderView()
@@ -63,12 +92,6 @@ struct HomeView: View {
         }
         .background(Color.white)
         .ignoresSafeArea()
-        .task {
-            await viewModel.loadPosts()
-        }
-        .refreshable {
-            await viewModel.loadPosts()
-        }
     }
 }
 
@@ -109,7 +132,6 @@ struct PostCard: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
         }
-        .frame(maxWidth: .infinity)
         .background(Color(red: 0.73, green: 0.87, blue: 0.91))
         .cornerRadius(12)
     }
