@@ -11,16 +11,39 @@ import Combine
 class HomeViewModel: ObservableObject {
     // ดึงมาเป็นArray ตามโครงสร้าง'Post'
     @Published var posts: [Post] = []
+    @Published var isLoading = false
+    
+    private var currentLoadTask: Task<Void, Never>?
 
 
     @MainActor
-    func loadPosts() async {
-        do {
-            let fetched = try await DatabaseManager.shared.fetchPost()
-            self.posts = fetched
-        } catch {
-            print("Failed to fetch posts", error)
-            self.posts = []
+    func loadPosts(reset: Bool = false) async {
+        
+            // ยกเลิกงานก่อนหน้า
+            currentLoadTask?.cancel()
+            
+            currentLoadTask = Task { [weak self] in
+                guard let self else { return }
+                if Task.isCancelled { return }
+                
+                // ตั้งสถานะโหลดก่อน เเละรีเซ็ตเมื่อร้องขอ
+                isLoading = true
+                if reset {
+                    try? await Task.sleep(nanoseconds: 0_500_000_000)
+                    self.posts = [] // รีเซ็ตเพื่อให้ UI แสดงตัวโหลดแทนการ์ดเก่า
+                }
+                
+                do { isLoading = false }
+            
+            
+            
+            do {
+                let fetched = try await DatabaseManager.shared.fetchPost()
+                self.posts = fetched
+            } catch {
+                print("Failed to fetch posts", error)
+                self.posts = []
+            }
         }
     }
 }
@@ -45,12 +68,10 @@ struct HomeView: View {
                 }
         }
         .task {
-            await viewModel.loadPosts()
+            await viewModel.loadPosts(reset: true)
         }
         .refreshable {
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            viewModel.posts = []
-            await viewModel.loadPosts()
+            await viewModel.loadPosts(reset: true)
         }
     }
 }
@@ -65,8 +86,16 @@ struct HomeContentView: View {
             VStack(spacing: 0) {
                 HeaderView()
                 ZStack{
-                    if viewModel.posts.isEmpty {
-                        ProgressView("Loading...")
+                    
+                    if viewModel.isLoading && viewModel.posts.isEmpty {
+                        // แสดงตัวโหลดแทน ไม่ให้จอขาว
+                        ProgressView("กำลังโหลด...")
+                            .padding(.top, 24)
+                    } else if viewModel.posts.isEmpty {
+                        // สถานะว่างหลังโหลดเสร็จแล้วแต่ไม่มีข้อมูล
+                        Text("ไม่มีไฟล์")
+                            .foregroundColor(.secondary)
+                            .padding(.top, 24)
                     } else {
                         ScrollView {
                             LazyVStack(alignment: .center, spacing: 20) {
